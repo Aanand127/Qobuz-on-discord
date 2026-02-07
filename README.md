@@ -2,7 +2,7 @@
 
 Display your currently playing **Qobuz** track as a Discord activity — with album art, Hi-Res Audio badge, and a local web dashboard to control everything.
 
-![Discord Rich Presence Preview](screenshots/discord-preview.png?v=2)
+![Discord Rich Presence Preview](screenshots/discord-preview.png)
 
 ## Features
 
@@ -18,7 +18,7 @@ Display your currently playing **Qobuz** track as a Discord activity — with al
 
 | Discord Activity | Web Dashboard |
 |:---:|:---:|
-| ![Discord Activity](screenshots/discord-activity.png?v=2) | ![Web Dashboard](screenshots/web-app.png?v=2) |
+| ![Discord Activity](screenshots/discord-rpc.png) | ![Web Dashboard](screenshots/web-app.png) |
 
 ## Requirements
 
