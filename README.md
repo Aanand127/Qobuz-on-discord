@@ -1,6 +1,6 @@
-# Qobuz Discord RPC
+# Qobuz Discord Rich Presence — Show Your Music Activity
 
-Show what you're listening to on **Qobuz** directly in your Discord profile — with album art, track info, and a sleek local web dashboard to control it all.
+Display your currently playing **Qobuz** track as a Discord activity — with album art, Hi-Res Audio badge, and a local web dashboard to control everything.
 
 ## Features
 
