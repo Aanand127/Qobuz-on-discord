@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Qobuz Discord RPC</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #1a1a2e;
+      color: #dcddde;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .container {
+      width: 400px;
+      background: #2f3136;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    .header {
+      background: #202225;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header h1 {
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #b9bbbe;
+    }
+
+    .status-dots {
+      display: flex;
+      gap: 8px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #72767d;
+      transition: background 0.3s;
+    }
+
+    .dot.active { background: #43b581; }
+    .dot.warning { background: #faa61a; }
+    .dot.error { background: #f04747; }
+
+    .dot-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: #72767d;
+    }
+
+    .player {
+      padding: 24px 20px;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .artwork-container {
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .artwork {
+      width: 100px;
+      height: 100px;
+      border-radius: 8px;
+      background: #36393f;
+      object-fit: cover;
+    }
+
+    .artwork-placeholder {
+      width: 100px;
+      height: 100px;
+      border-radius: 8px;
+      background: #36393f;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #72767d;
+      font-size: 36px;
+    }
+
+    .small-icon {
+      position: absolute;
+      bottom: -4px;
+      right: -4px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 3px solid #2f3136;
+      background: #36393f;
+      object-fit: cover;
+    }
+
+    .track-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .track-info .song {
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 4px;
+    }
+
+    .track-info .artist {
+      font-size: 13px;
+      color: #b9bbbe;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 2px;
+    }
+
+    .track-info .album {
+      font-size: 12px;
+      color: #72767d;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 8px;
+    }
+
+    .elapsed {
+      font-size: 11px;
+      color: #72767d;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .no-track {
+      padding: 24px 20px;
+      text-align: center;
+      color: #72767d;
+      font-size: 14px;
+    }
+
+    .no-track .icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+      opacity: 0.5;
+    }
+
+    .controls {
+      padding: 16px 20px;
+      border-top: 1px solid #202225;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .toggle-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: #b9bbbe;
+    }
+
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      cursor: pointer;
+    }
+
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle .slider {
+      position: absolute;
+      inset: 0;
+      background: #72767d;
+      border-radius: 12px;
+      transition: background 0.3s;
+    }
+
+    .toggle .slider::before {
+      content: '';
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      left: 3px;
+      bottom: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.3s;
+    }
+
+    .toggle input:checked + .slider {
+      background: #5865f2;
+    }
+
+    .toggle input:checked + .slider::before {
+      transform: translateX(20px);
+    }
+
+    .settings-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .settings-row input {
+      flex: 1;
+      padding: 8px 10px;
+      background: #202225;
+      border: 1px solid #40444b;
+      border-radius: 6px;
+      color: #dcddde;
+      font-size: 12px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .settings-row input:focus {
+      border-color: #5865f2;
+    }
+
+    .settings-row button {
+      padding: 8px 14px;
+      background: #5865f2;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+
+    .settings-row button:hover {
+      background: #4752c4;
+    }
+
+    .footer {
+      padding: 10px 20px;
+      background: #202225;
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #72767d;
+    }
+
+    .ws-status {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .ws-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #f04747;
+      transition: background 0.3s;
+    }
+
+    .ws-dot.connected { background: #43b581; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header with status indicators -->
+    <div class="header">
+      <h1>Qobuz RPC</h1>
+      <div class="status-dots">
+        <div class="dot-label">
+          <div class="dot" id="dotDiscord"></div>
+          Discord
+        </div>
+        <div class="dot-label">
+          <div class="dot" id="dotQobuz"></div>
+          Qobuz
+        </div>
+      </div>
+    </div>
+
+    <!-- Player display -->
+    <div id="playerSection">
+      <div class="no-track" id="noTrack">
+        <div class="icon">&#9835;</div>
+        <div>Esperando reproduccion en Qobuz...</div>
+      </div>
+      <div class="player" id="playerInfo" style="display:none;">
+        <div class="artwork-container">
+          <img class="artwork" id="artwork" src="" alt="Album art">
+          <img class="small-icon" id="smallIcon" src="" alt="Small icon">
+        </div>
+        <div class="track-info">
+          <div class="song" id="songName">-</div>
+          <div class="artist" id="artistName">-</div>
+          <div class="album" id="albumName">-</div>
+          <div class="elapsed" id="elapsed">00:00</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <div class="toggle-row">
+        <span class="toggle-label">Discord Rich Presence</span>
+        <label class="toggle">
+          <input type="checkbox" id="rpcToggle" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="settings-row">
+        <input type="text" id="smallImageInput" placeholder="URL de small image">
+        <button id="saveSettings">Guardar</button>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <div class="ws-status">
+        <div class="ws-dot" id="wsDot"></div>
+        <span id="wsLabel">Desconectado</span>
+      </div>
+      <div>Qobuz Discord RPC</div>
+    </div>
+  </div>
+
+  <script>
+    // DOM refs
+    const dotDiscord = document.getElementById('dotDiscord');
+    const dotQobuz = document.getElementById('dotQobuz');
+    const noTrack = document.getElementById('noTrack');
+    const playerInfo = document.getElementById('playerInfo');
+    const artwork = document.getElementById('artwork');
+    const smallIcon = document.getElementById('smallIcon');
+    const songName = document.getElementById('songName');
+    const artistName = document.getElementById('artistName');
+    const albumName = document.getElementById('albumName');
+    const elapsed = document.getElementById('elapsed');
+    const rpcToggle = document.getElementById('rpcToggle');
+    const smallImageInput = document.getElementById('smallImageInput');
+    const saveSettings = document.getElementById('saveSettings');
+    const wsDot = document.getElementById('wsDot');
+    const wsLabel = document.getElementById('wsLabel');
+
+    let trackStartedAt = null;
+    let elapsedTimer = null;
+
+    // -- Elapsed time formatter --
+    function updateElapsed() {
+      if (!trackStartedAt) return;
+      const diff = Math.floor((Date.now() - trackStartedAt) / 1000);
+      const m = String(Math.floor(diff / 60)).padStart(2, '0');
+      const s = String(diff % 60).padStart(2, '0');
+      elapsed.textContent = `${m}:${s} transcurrido`;
+    }
+
+    // -- Apply state from server --
+    function applyState(state) {
+      // Status dots
+      dotDiscord.className = 'dot ' + (state.rpcConnected ? 'active' : (state.rpcEnabled ? 'warning' : 'error'));
+      dotQobuz.className = 'dot ' + (state.qobuzDetected ? 'active' : 'error');
+
+      // Toggle sync
+      rpcToggle.checked = state.rpcEnabled;
+
+      // Small image input
+      if (document.activeElement !== smallImageInput) {
+        smallImageInput.value = state.smallImageUrl || '';
+      }
+
+      // Track display
+      if (state.track) {
+        noTrack.style.display = 'none';
+        playerInfo.style.display = 'flex';
+
+        songName.textContent = state.track.song;
+        artistName.textContent = state.track.artist;
+
+        if (state.track.album) {
+          albumName.textContent = state.track.album + (state.track.year ? ` (${state.track.year})` : '');
+          albumName.style.display = 'block';
+        } else {
+          albumName.style.display = 'none';
+        }
+
+        if (state.track.artwork) {
+          artwork.src = state.track.artwork;
+          artwork.style.display = 'block';
+        } else {
+          artwork.style.display = 'none';
+        }
+
+        if (state.smallImageUrl) {
+          smallIcon.src = state.smallImageUrl;
+          smallIcon.style.display = 'block';
+        } else {
+          smallIcon.style.display = 'none';
+        }
+
+        // Elapsed timer
+        trackStartedAt = new Date(state.track.startedAt).getTime();
+        if (elapsedTimer) clearInterval(elapsedTimer);
+        updateElapsed();
+        elapsedTimer = setInterval(updateElapsed, 1000);
+      } else {
+        noTrack.style.display = 'block';
+        playerInfo.style.display = 'none';
+        trackStartedAt = null;
+        if (elapsedTimer) {
+          clearInterval(elapsedTimer);
+          elapsedTimer = null;
+        }
+      }
+    }
+
+    // -- WebSocket connection with auto-reconnect --
+    let ws = null;
+
+    function connectWs() {
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${protocol}//${location.host}`);
+
+      ws.onopen = () => {
+        wsDot.classList.add('connected');
+        wsLabel.textContent = 'Conectado';
+      };
+
+      ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'state') {
+          applyState(msg.data);
+        }
+      };
+
+      ws.onclose = () => {
+        wsDot.classList.remove('connected');
+        wsLabel.textContent = 'Desconectado';
+        setTimeout(connectWs, 2000);
+      };
+
+      ws.onerror = () => {
+        ws.close();
+      };
+    }
+
+    connectWs();
+
+    // -- Toggle RPC --
+    rpcToggle.addEventListener('change', async () => {
+      try {
+        const res = await fetch('/api/toggle', { method: 'POST' });
+        const data = await res.json();
+        rpcToggle.checked = data.rpcEnabled;
+      } catch {
+        // WS will sync state
+      }
+    });
+
+    // -- Save settings --
+    saveSettings.addEventListener('click', async () => {
+      try {
+        await fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ smallImageUrl: smallImageInput.value }),
+        });
+      } catch {
+        // WS will sync state
+      }
+    });
+
+    // Allow Enter key to save
+    smallImageInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') saveSettings.click();
+    });
+  </script>
+</body>
+</html>

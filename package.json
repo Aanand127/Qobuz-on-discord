@@ -1,0 +1,16 @@
+{
+  "name": "qobuz-discord-rpc",
+  "version": "2.0.0",
+  "description": "Rich Presence de Qobuz para Discord con interfaz web local",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "discord-rpc": "^4.0.1",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "open": "^10.1.0",
+    "ws": "^8.18.0"
+  }
+}
