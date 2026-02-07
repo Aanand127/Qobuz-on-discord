@@ -2,9 +2,6 @@
 
 Show what you're listening to on **Qobuz** directly in your Discord profile — with album art, track info, and a sleek local web dashboard to control it all.
 
-![Discord Activity](fotos/discord-activity.png)
-![Web Dashboard](fotos/web-app.png)
-
 ## Features
 
 - **Discord Rich Presence** — Displays current track, artist, album, and elapsed time
@@ -19,7 +16,7 @@ Show what you're listening to on **Qobuz** directly in your Discord profile — 
 
 | Discord Activity | Web Dashboard |
 |:---:|:---:|
-| ![Discord](fotos/discord-activity.png) | ![Web App](fotos/web-app.png) |
+| ![Discord Activity](screenshots/discord-activity.png) | ![Web Dashboard](screenshots/web-app.png) |
 
 ## Requirements
 
@@ -33,7 +30,7 @@ Show what you're listening to on **Qobuz** directly in your Discord profile — 
 1. **Clone the repository**
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/qobuz-discord-rpc.git
+git clone https://github.com/piodois/qobuz-discord-rpc.git
 cd qobuz-discord-rpc
 ```
 
@@ -87,7 +84,7 @@ qobuz-discord-rpc/
 ├── server.js          # Express server + WebSocket + RPC engine
 ├── public/
 │   └── index.html     # Web dashboard (single-file frontend)
-├── fotos/
+├── screenshots/
 │   ├── discord-activity.png
 │   └── web-app.png
 ├── .env               # Environment config (not committed)
