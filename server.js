@@ -33,7 +33,7 @@ let rpcConnected = false;
 let pollTimer = null;
 let lastTitle = '';
 let trackStart = null;
-let smallImageUrl = process.env.SMALL_IMAGE_URL || 'https://i.imgur.com/StuXjPv.png';
+let smallImageUrl = process.env.SMALL_IMAGE_URL || 'https://i.imgur.com/MgvAj7F.jpeg';
 const artworkCache = new Map();
 
 // Current track state broadcast to all WS clients

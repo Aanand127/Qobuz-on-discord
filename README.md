@@ -69,7 +69,7 @@ The web dashboard opens automatically at `http://localhost:3900`.
 | `DISCORD_CLIENT_ID` | Your Discord Application Client ID | *required* |
 | `POLL_INTERVAL_MS` | How often to check Qobuz (ms) | `5000` |
 | `WEB_PORT` | Web dashboard port | `3900` |
-| `SMALL_IMAGE_URL` | Small icon URL in Rich Presence | `https://i.imgur.com/StuXjPv.png` |
+| `SMALL_IMAGE_URL` | Small icon URL in Rich Presence | `https://i.imgur.com/MgvAj7F.jpeg` |
 
 ## How it works
 
