@@ -2,6 +2,8 @@
 
 Display your currently playing **Qobuz** track as a Discord activity — with album art, Hi-Res Audio badge, and a local web dashboard to control everything.
 
+![Discord Rich Presence Preview](screenshots/discord-preview.png)
+
 ## Features
 
 - **Discord Rich Presence** — Displays current track, artist, album, and elapsed time
