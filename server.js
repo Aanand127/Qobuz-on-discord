@@ -7,6 +7,8 @@ const RPC = require('discord-rpc');
 const { execSync } = require('child_process');
 const path = require('path');
 require('dotenv').config();
+const fs = require('fs');
+const sqlite3 = require('sqlite3').verbose();
 
 // -- Environment configuration --
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
@@ -56,6 +58,198 @@ function getQobuzWindowTitle() {
     return result || null;
   } catch {
     return null;
+  }
+}
+
+// -- macOS File Monitoring --
+let macWatcher = null;
+const homedir = require('os').homedir();
+const MAC_PLAYER_FILE = path.join(homedir, 'Library/Application Support/Qobuz/player-0.json');
+const MAC_DB_FILE = path.join(homedir, 'Library/Application Support/Qobuz/qobuz.db');
+
+function monitorMac() {
+  if (macWatcher) return;
+
+  console.log(`[MAC:MONITOR] Watching ${MAC_PLAYER_FILE}`);
+
+  try {
+    macWatcher = fs.watch(MAC_PLAYER_FILE, (eventType) => {
+      if (eventType === 'change') {
+        readMacPlayerFile();
+      }
+    });
+    // Initial read
+    readMacPlayerFile();
+  } catch (err) {
+    console.error(`[MAC:ERROR] Could not watch file: ${err.message}`);
+  }
+}
+
+function readMacPlayerFile() {
+  fs.readFile(MAC_PLAYER_FILE, 'utf8', (err, data) => {
+    if (err) {
+      console.error(`[MAC:READ] Error reading player file: ${err.message}`);
+      return;
+    }
+
+    try {
+      const playerState = JSON.parse(data);
+
+      // Structure analysis of player-0.json:
+      // Root -> playqueue -> data -> currentIndex (int)
+      // Root -> playqueue -> data -> items (array)
+      // We need items[currentIndex].trackId
+
+      let trackId = null;
+
+      if (playerState.playqueue && playerState.playqueue.data) {
+        const queueData = playerState.playqueue.data;
+        const currentIndex = queueData.currentIndex;
+        let items = queueData.items;
+
+        // Handle shuffle mode
+        if (queueData.shuffled && queueData.shuffledItems && queueData.shuffledItems.length > 0) {
+          items = queueData.shuffledItems;
+        }
+
+        if (typeof currentIndex === 'number' && Array.isArray(items) && items[currentIndex]) {
+          trackId = items[currentIndex].trackId;
+        }
+      }
+
+      if (trackId) {
+        queryMacDb(trackId);
+      } else {
+        // Only stop if we really can't find a track, but be careful not to flicker
+        // handleMacStop(); 
+      }
+    } catch (parseErr) {
+      console.error(`[MAC:PARSE] Error parsing JSON: ${parseErr.message}`);
+    }
+  });
+}
+
+function queryMacDb(trackId) {
+  const db = new sqlite3.Database(MAC_DB_FILE, sqlite3.OPEN_READONLY, (err) => {
+    if (err) {
+      console.error(`[MAC:DB] Error opening DB: ${err.message}`);
+      return;
+    }
+  });
+
+  const queryS = `SELECT * FROM S_Track WHERE id = ?`;
+
+  db.get(queryS, [trackId], async (err, row) => {
+    if (err) {
+      console.error(`[MAC:DB] S_Track query error: ${err.message}`);
+    }
+
+    if (row) {
+      processTrackRow(row, 'S_Track');
+      db.close();
+    } else {
+      // Try L_Track
+      const queryL = `SELECT * FROM L_Track WHERE track_id = ?`;
+      db.get(queryL, [trackId], (errL, rowL) => {
+        if (errL) {
+          console.error(`[MAC:DB] L_Track query error: ${errL.message}`);
+        }
+
+        if (rowL) {
+          processTrackRow(rowL, 'L_Track');
+        } else {
+          console.log(`[MAC:DB] Track ${trackId} not found in S_Track or L_Track`);
+        }
+        db.close();
+      });
+    }
+  });
+}
+
+function processTrackRow(row, source) {
+  let title, artist, album, year;
+
+  if (source === 'S_Track') {
+    title = row.title;
+    artist = row.track_artists_names || row.performer_name || 'Unknown Artist';
+    album = row.release_name || row.album_name || 'Unknown Album';
+    if (row.released_at) {
+      year = new Date(row.released_at * 1000).getFullYear();
+      if (isNaN(year)) year = new Date(row.released_at).getFullYear();
+    }
+  } else if (source === 'L_Track') {
+    try {
+      const data = JSON.parse(row.data);
+      title = data.title;
+      artist = (data.artist && data.artist.name) || 'Unknown Artist';
+      if (artist === 'Unknown Artist' && data.performers) {
+        artist = data.performers.split(',')[0].trim();
+      }
+
+      album = (data.album && data.album.title) || 'Unknown Album';
+
+      if (data.release_date_original) {
+        year = new Date(data.release_date_original).getFullYear();
+      }
+    } catch (e) {
+      console.error(`[MAC:PARSE] Error parsing L_Track data: ${e.message}`);
+      return;
+    }
+  }
+
+  if (lastTitle !== title) {
+    lastTitle = title;
+    trackStart = new Date();
+
+    fetchArtwork(artist, title).then(artworkUrl => {
+      currentState.track = {
+        song: title,
+        artist: artist,
+        album: album,
+        year: year,
+        artwork: artworkUrl,
+        startedAt: trackStart.toISOString(),
+      };
+
+      currentState.qobuzDetected = true;
+      broadcastState();
+      updateDiscordPresence(currentState.track);
+    });
+
+    console.log(`[MAC:TRACK] Detected: ${title} - ${artist} (Source: ${source})`);
+  }
+}
+
+function handleMacStop() {
+  if (currentState.track) {
+    currentState.track = null;
+    currentState.qobuzDetected = false;
+    broadcastState();
+    if (rpcClient) rpcClient.clearActivity();
+    lastTitle = '';
+  }
+}
+
+function updateDiscordPresence(track) {
+  if (rpcEnabled && rpcConnected && rpcClient) {
+    const activity = {
+      type: 2,
+      details: track.song,
+      state: track.artist,
+      startTimestamp: new Date(track.startedAt),
+      instance: false,
+    };
+
+    if (track.artwork) {
+      activity.largeImageKey = track.artwork;
+      activity.largeImageText = track.album
+        ? `${track.album}${track.year ? ` (${track.year})` : ''}`
+        : 'Qobuz';
+      activity.smallImageKey = smallImageUrl;
+      activity.smallImageText = 'Hi-Res Audio';
+    }
+
+    rpcClient.setActivity(activity).catch(console.error);
   }
 }
 
@@ -202,9 +396,15 @@ async function updatePresence() {
 // -- Start/stop polling --
 function startPolling() {
   if (pollTimer) return;
-  updatePresence();
-  pollTimer = setInterval(updatePresence, POLL_INTERVAL);
-  console.log(`[SERVER:POLL] Monitoreando Qobuz cada ${POLL_INTERVAL / 1000}s`);
+
+  if (process.platform === 'darwin') {
+    console.log('[SERVER:POLL] Detectado macOS, iniciando monitor de archivos...');
+    monitorMac();
+  } else {
+    updatePresence();
+    pollTimer = setInterval(updatePresence, POLL_INTERVAL);
+    console.log(`[SERVER:POLL] Monitoreando Qobuz cada ${POLL_INTERVAL / 1000}s`);
+  }
 }
 
 function stopPolling() {

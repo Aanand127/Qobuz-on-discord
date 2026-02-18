@@ -7,10 +7,12 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "bindings": "^1.5.0",
     "discord-rpc": "^4.0.1",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "open": "^10.1.0",
+    "sqlite3": "^5.1.7",
     "ws": "^8.18.0"
   }
 }
