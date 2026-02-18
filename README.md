@@ -7,12 +7,12 @@ Display your currently playing **Qobuz** track as a Discord activity — with al
 ## Features
 
 - **Discord Rich Presence** — Displays current track, artist, album, and elapsed time
+- **Cross-Platform** — Works on **Windows** and **macOS**
 - **Album artwork** — Automatically fetched from iTunes Search API in high resolution (512x512)
 - **Web dashboard** — Local web interface with real-time updates via WebSocket
 - **Toggle on/off** — Enable or disable the Discord presence from the web UI
 - **Customizable** — Change the small icon URL directly from the dashboard
 - **Auto-launch** — Opens the web dashboard in your browser on startup
-- **Windows only** — Detects Qobuz playback via window title (PowerShell)
 
 ## Screenshots
 
@@ -73,11 +73,20 @@ The web dashboard opens automatically at `http://localhost:3900`.
 
 ## How it works
 
-1. Reads the Qobuz desktop window title via PowerShell to detect the current track
-2. Parses the title format: `Song (Album / Year) - Artist`
-3. Fetches album artwork from iTunes Search API (cached)
-4. Updates Discord Rich Presence with track info and artwork
-5. Broadcasts state to the web dashboard via WebSocket in real time
+### macOS
+- Monitors `~/Library/Application Support/Qobuz/player-0.json` for real-time track changes (including shuffle mode).
+- Queries the local Qobuz database (`qobuz.db`) to retrieve track metadata.
+  - Checks `S_Track` (streaming tracks) first.
+  - Fallbacks to `L_Track` (offline/local tracks) if necessary.
+
+### Windows
+- Reads the Qobuz desktop window title via PowerShell to detect the current track.
+- Parses the title format: `Song (Album / Year) - Artist`
+
+### Common
+- Fetches album artwork from iTunes Search API (cached)
+- Updates Discord Rich Presence with track info and artwork
+- Broadcasts state to the web dashboard via WebSocket in real time
 
 ## Project structure
 
